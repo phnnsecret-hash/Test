@@ -76,7 +76,7 @@ end
 
 while task.wait(3) do
     if hasTarget() then
-        print("Mokou bulundu")
+        print("Mokou")
         break
     else
         ServerHop()
