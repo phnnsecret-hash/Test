@@ -1,3 +1,4 @@
+
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
@@ -9,83 +10,76 @@ local TARGET_MOVESET = "Mokou"
 local function hasTarget()
     local chars = workspace:FindFirstChild("Characters")
     if not chars then return false end
-    
+
     local playersFolder = chars:FindFirstChild("Oyuncular")
     if not playersFolder then return false end
-    
+
     for _, model in ipairs(playersFolder:GetChildren()) do
         if model:IsA("Model") and model:GetAttribute("Moveset") == TARGET_MOVESET then
             return true
         end
     end
-    
+
     return false
 end
 
-local function getServers()
+local function ServerHop()
     local servers = {}
-    local cursor = nil
 
-    repeat
-        local url = "https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?sortOrder=Asc&limit=100"
-        if cursor then
-            url = url .. "&cursor=" .. cursor
+    local success, req = pcall(function()
+        return game:HttpGet(
+            "https://games.roblox.com/v1/games/" .. PLACE_ID ..
+            "/servers/Public?sortOrder=Desc&limit=100&excludeFullGames=true"
+        )
+    end)
+
+    if not success or not req then
+        warn("Request failed")
+        return
+    end
+
+    local body
+    local decodeSuccess = pcall(function()
+        body = HttpService:JSONDecode(req)
+    end)
+
+    if not decodeSuccess or not body or not body.data then
+        warn("Invalid server data")
+        return
+    end
+
+    for _, v in next, body.data do
+        if type(v) == "table"
+        and tonumber(v.playing)
+        and tonumber(v.maxPlayers)
+        and v.playing < v.maxPlayers
+        and v.id ~= JOB_ID then
+
+            table.insert(servers, v.id)
         end
+    end
 
-        local req = request({
-            Url = url,
-            Method = "GET"
-        })
+    if #servers > 0 then
+        queue_on_teleport([[
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/phnnsecret-hash/Test/refs/heads/main/test"))()
+        ]])
 
-        if not req or req.StatusCode ~= 200 then
-            warn("Request failed")
-            return servers
-        end
-
-        local success, body = pcall(function()
-            return HttpService:JSONDecode(req.Body)
-        end)
-
-        if not success or not body or not body.data then
-            warn("Invalid response body")
-            return servers
-        end
-
-        for _, server in ipairs(body.data) do
-            if server.playing and server.maxPlayers and server.id then
-                if server.playing < server.maxPlayers and server.id ~= game.JobId then
-                    table.insert(servers, server.id)
-                end
-            end
-        end
-
-        cursor = body.nextPageCursor
-        task.wait(0.2)
-
-    until not cursor
-
-    return servers
+        TeleportService:TeleportToPlaceInstance(
+            PLACE_ID,
+            servers[math.random(1, #servers)],
+            Players.LocalPlayer
+        )
+    else
+        warn("Couldn't find a server.")
+    end
 end
 
-local function hop()
-    local servers = getServers()
-    if #servers == 0 then return end
-    
-    local chosen = servers[math.random(1, #servers)]
-    
-    queue_on_teleport([[
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/phnnsecret-hash/Test/refs/heads/main/test"))()
-    ]])
-    
-    TeleportService:TeleportToPlaceInstance(PLACE_ID, chosen, Players.LocalPlayer)
-end
-
-while task.wait(1) do
+while task.wait(3) do
     if hasTarget() then
-        print("Mokou")
+        print("Mokou bulundu")
         break
     else
-        hop()
+        ServerHop()
         break
     end
 end
